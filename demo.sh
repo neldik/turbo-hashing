@@ -15,7 +15,7 @@ rm -rf "$demo"
 git clone -q "$src" "$demo"
 cd "$demo"
 git config user.name demo && git config user.email demo@example.com
-npm ci --silent --no-audit --no-fund
+npm ci --no-audit --no-fund --loglevel=error
 
 export LOCAL_REGISTRY=$demo/registry TURBO_TELEMETRY_DISABLED=1
 log=$demo/build.log
