@@ -1,0 +1,19 @@
+# Service C: a detached uv project (not a workspace member). It can only get
+# internal packages from the registry, exactly like a container build would.
+[build-system]
+requires = ["setuptools>=64", "setuptools-scm>=8"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "pkg-c"
+dynamic = ["version"]          # APP_VERSION via SETUPTOOLS_SCM_PRETEND_VERSION
+requires-python = ">=3.11"
+dependencies = [
+    "pkg-b",                   # internal: unpinned, pinned at build time
+    "idna>=3",                 # external: pinned by the committed uv.lock
+]
+
+[tool.setuptools_scm]
+root = "../.."                 # fallback for local builds
+tag_regex = "^v(?P<version>.+)$"
+fallback_version = "0.0.0"

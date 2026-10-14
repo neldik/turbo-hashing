@@ -1,0 +1,11 @@
+node_modules/
+.turbo/
+.venv/
+dist/
+build/
+*.egg-info/
+__pycache__/
+registry/dev/*
+registry/prod/*
+!registry/*/.gitkeep
+versions.json

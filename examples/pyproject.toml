@@ -1,0 +1,20 @@
+# Example: packages/pkg-a/pyproject.toml
+[build-system]
+requires = ["setuptools>=64", "setuptools-scm>=8"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "pkg-a"
+dynamic = ["version"]          # set by CI via SETUPTOOLS_SCM_PRETEND_VERSION_FOR_PKG_A
+requires-python = ">=3.11"
+dependencies = [
+    "pkg-b",                   # internal: unpinned, pins come from constraints.txt
+    "requests>=2.31",          # external: range here, exact pin from uv.lock
+]
+
+[tool.uv.sources]
+pkg-b = { workspace = true }   # in-repo installs always use the local copy
+
+[tool.setuptools_scm]
+root = "../.."                 # fallback for local builds
+tag_regex = "^v(?P<version>.+)$"

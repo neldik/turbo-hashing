@@ -1,0 +1,4 @@
+#!/usr/bin/env bash
+# Run a tools/ script with Python >= 3.11 and its dependencies, independent of
+# the system Python and of the workspace.
+exec uv run --quiet --no-project --python 3.12 --with packaging --with tomlkit python "$@"

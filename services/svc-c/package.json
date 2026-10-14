@@ -1,0 +1,8 @@
+{
+  "name": "pkg-c",
+  "private": true,
+  "scripts": {
+    "build": "../../tools/turbo_build_service.sh"
+  },
+  "dependencies": { "pkg-b": "*" }
+}

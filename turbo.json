@@ -1,0 +1,13 @@
+{
+  "$schema": "https://turborepo.com/schema.json",
+  "globalEnv": [],
+  "globalPassThroughEnv": ["VERSIONING_REGISTRY", "UV_CACHE_DIR", "HOME", "PATH"],
+  "tasks": {
+    "build": {
+      "dependsOn": ["^build"],
+      "inputs": ["src/**", "pyproject.toml", "uv.lock", "README.md", "package.json"],
+      "outputs": ["dist/**"],
+      "env": []
+    }
+  }
+}

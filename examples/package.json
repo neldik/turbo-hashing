@@ -1,0 +1,9 @@
+{
+  "name": "pkg-a",
+  "private": true,
+  "scripts": {
+    "build": "uv build --wheel --out-dir dist",
+    "test": "uv run pytest",
+    "lint": "uv run ruff check ."
+  }
+}

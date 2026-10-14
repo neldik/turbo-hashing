@@ -1,0 +1,14 @@
+# uv workspace root. Services are deliberately NOT members: they are detached
+# projects that can only consume internal packages from the registry.
+[project]
+name = "monorepo-root"
+version = "0"
+requires-python = ">=3.11"
+dependencies = []
+
+[tool.uv]
+package = false
+
+[tool.uv.workspace]
+members = ["packages/*"]
+exclude = ["services/*"]

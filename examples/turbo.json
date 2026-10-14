@@ -1,0 +1,18 @@
+{
+  "$schema": "https://turborepo.com/schema.json",
+  "tasks": {
+    "build": {
+      "dependsOn": ["^build"],
+      "inputs": ["src/**", "pyproject.toml", "README.md", "package.json"],
+      "outputs": ["dist/**"],
+      "env": []
+    },
+    "test": {
+      "dependsOn": ["build"],
+      "inputs": ["src/**", "tests/**", "pyproject.toml"]
+    },
+    "lint": {
+      "inputs": ["src/**", "tests/**", "pyproject.toml"]
+    }
+  }
+}
