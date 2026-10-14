@@ -21,7 +21,7 @@ Output (JSON):
   "release": false,
   "packages": {
     "pkg-b": {"version": "1.4.0+t3f9a2c1b7e04", "directory": "packages/pkg-b",
-              "turbo_package": "pkg-b"},
+              "turbo_package": "pkg-b", "publish": true},
     ...
   }
 }
@@ -82,16 +82,39 @@ def last_release_version() -> str:
 
 
 def turbo_tasks() -> list[dict]:
-    out = run(*TURBO_BIN, "run", TURBO_TASK, "--dry=json")
+    # Same VERSIONING_TAGS as turbo_build.sh, so the hashes match the build's.
+    out = subprocess.run(
+        [*TURBO_BIN, "run", TURBO_TASK, "--dry=json"], check=True,
+        capture_output=True, text=True,
+        env={**os.environ, "VERSIONING_TAGS": tag_state()},
+    ).stdout
     return json.loads(out)["tasks"]
 
 
-def dist_name(pyproject: Path) -> str:
+def project_info(pyproject: Path) -> tuple[str, bool]:
+    """Distribution name, and whether it is published as a wheel
+    (`[tool.versioning] publish = false` for services, which only get a
+    version for their image)."""
     data = tomllib.loads(pyproject.read_text())
     try:
-        return data["project"]["name"]
+        name = data["project"]["name"]
     except KeyError:
         sys.exit(f"error: {pyproject} has no [project].name")
+    return name, data.get("tool", {}).get("versioning", {}).get("publish", True)
+
+
+def tag_state() -> str:
+    """Release state of HEAD as one string, part of every turbo task hash
+    (VERSIONING_TAGS, set by turbo_build.sh)."""
+    return f"release={release_version() or ''};base={last_release_version()}"
+
+
+def check_tag_state() -> None:
+    expected = tag_state()
+    actual = os.environ.get("VERSIONING_TAGS")
+    if actual != expected:
+        sys.exit(f"error: VERSIONING_TAGS={actual!r}, but git says {expected!r}; "
+                 "run the build via tools/turbo_build.sh (npm run build)")
 
 
 def self_task(package_dir: Path, root: Path) -> list[dict]:
@@ -121,7 +144,7 @@ def compute(tasks: list[dict]) -> dict:
         if not pyproject.is_file():
             continue  # not a Python package (e.g. a JS package)
 
-        name = dist_name(pyproject)
+        name, publish = project_info(pyproject)
         version = release or f"{base}+t{task['hash'][:HASH_LENGTH]}"
         if name in packages:
             sys.exit(f"error: distribution name '{name}' used by two packages")
@@ -129,6 +152,7 @@ def compute(tasks: list[dict]) -> dict:
             "version": version,
             "directory": directory,
             "turbo_package": task["package"],
+            "publish": publish,
         }
 
     if not packages:
@@ -146,12 +170,19 @@ def main() -> None:
     parser.add_argument("-o", "--output", help="write JSON here (default: stdout)")
     parser.add_argument("--self", action="store_true", dest="self_only",
                         help="only the package in the current directory, using $TURBO_HASH")
+    parser.add_argument("--tag-state", action="store_true",
+                        help="print the value for VERSIONING_TAGS and exit")
     args = parser.parse_args()
+    if args.tag_state:
+        print(tag_state())
+        return
     output = Path(args.output).resolve() if args.output else None
 
     cwd = Path.cwd()
     root = Path(git("rev-parse", "--show-toplevel"))
     os.chdir(root)
+    if args.self_only or "TURBO_HASH" in os.environ:  # inside a turbo task
+        check_tag_state()
     tasks = self_task(cwd, root) if args.self_only else turbo_tasks()
     result = json.dumps(compute(tasks), indent=2) + "\n"
 

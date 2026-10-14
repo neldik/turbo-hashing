@@ -2,8 +2,14 @@
   "name": "versioning-monorepo",
   "private": true,
   "packageManager": "npm@12.2.0",
-  "workspaces": ["packages/*", "services/*"],
+  "workspaces": [
+    "packages/*",
+    "services/*"
+  ],
   "devDependencies": {
     "turbo": "^2"
+  },
+  "scripts": {
+    "build": "tools/turbo_build.sh"
   }
 }

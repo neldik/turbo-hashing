@@ -23,6 +23,11 @@ Externals can move when a new internal version needs a dependency the
 committed lock doesn't satisfy (a new or newer library). That is reported, so
 the service's committed lock can be refreshed deliberately.
 
+--wheels DIR      file-based registry (prototype): DIR is copied to ../wheels
+                  next to the service and used as uv's find-links path, so
+                  the lock refers to `../wheels` and works unchanged in an
+                  image with the same layout (/app + /wheels).
+
 --externals root  ignores the service's committed lock and pins externals to
                   the root uv.lock instead (for services that are workspace
                   members without a lock of their own).
@@ -30,7 +35,7 @@ the service's committed lock can be refreshed deliberately.
 Env: UV_DEFAULT_INDEX  Artifactory index URL incl. credentials
                        (set by build_container.sh). uv does not write the
                        credentials into uv.lock.
-     UV_FIND_LINKS     instead, for the file-based prototype registry.
+     (not needed with --wheels)
 Requires: tomlkit, packaging (e.g. `uv run --with tomlkit --with packaging`).
 """
 from __future__ import annotations
@@ -75,12 +80,13 @@ def main() -> None:
     parser.add_argument("--externals", choices=["lock", "root"], default="lock",
                         help="lock: keep externals from the service's committed uv.lock "
                              "(default); root: pin externals to the root uv.lock")
+    parser.add_argument("--wheels", help="file-based registry dir, see above")
     parser.add_argument("--strict", action="store_true",
                         help="fail if any external package version changes")
     args = parser.parse_args()
 
-    if not (os.environ.get("UV_DEFAULT_INDEX") or os.environ.get("UV_FIND_LINKS")):
-        sys.exit("error: neither UV_DEFAULT_INDEX nor UV_FIND_LINKS is set")
+    if not (os.environ.get("UV_DEFAULT_INDEX") or args.wheels):
+        sys.exit("error: set UV_DEFAULT_INDEX or pass --wheels")
 
     data = json.loads(Path(args.versions).read_text())
     service_dir = Path(args.service_dir).resolve()
@@ -100,6 +106,14 @@ def main() -> None:
 
     tool = doc.setdefault("tool", tomlkit.table())
     uv = tool.setdefault("uv", tomlkit.table())
+    # Internal packages come from the registry, so drop their workspace/path
+    # sources. The image can then run `uv sync --frozen` without
+    # --no-sources (uv refuses that combination).
+    sources = uv.get("sources", {})
+    for name in [n for n in sources if canonicalize_name(n) in internal_names]:
+        del sources[name]
+    if "sources" in uv and not uv["sources"]:
+        del uv["sources"]
     array = tomlkit.array()
     array.multiline(True)
     for c in list(uv.get("constraint-dependencies", [])) + constraints:
@@ -123,6 +137,10 @@ def main() -> None:
         env = {**os.environ,
                "SETUPTOOLS_SCM_PRETEND_VERSION": service_version,
                "UV_NO_SOURCES": "1"}
+        if args.wheels:
+            shutil.copytree(args.wheels, Path(tmp) / "wheels",
+                            ignore=shutil.ignore_patterns("*.json", ".*"))
+            env["UV_FIND_LINKS"] = "../wheels"
         # No --upgrade: uv keeps every locked version that still satisfies
         # the requirements, so only the internal packages move.
         subprocess.run(["uv", "lock", "--no-sources"], cwd=work, check=True, env=env)

@@ -1,13 +1,15 @@
 {
   "$schema": "https://turborepo.com/schema.json",
-  "globalEnv": [],
-  "globalPassThroughEnv": ["VERSIONING_REGISTRY", "UV_CACHE_DIR", "HOME", "PATH"],
+  "globalPassThroughEnv": ["LOCAL_REGISTRY", "TURBO_BIN", "UV_*", "HOME", "PATH"],
   "tasks": {
     "build": {
       "dependsOn": ["^build"],
-      "inputs": ["src/**", "pyproject.toml", "uv.lock", "README.md", "package.json"],
+      "inputs": [
+        "src/**", "pyproject.toml", "uv.lock", "README.md", "package.json",
+        "!**/*.egg-info/**", "!**/__pycache__/**"
+      ],
       "outputs": ["dist/**"],
-      "env": []
+      "env": ["VERSIONING_TAGS"]
     }
   }
 }

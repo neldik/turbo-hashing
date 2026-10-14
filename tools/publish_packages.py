@@ -76,9 +76,9 @@ def main() -> None:
     art = get_registry(data["release"])
     print(f"target repo: {art} (release={data['release']}, commit={data['commit']})")
 
-    missing = [(n, p) for n, p in data["packages"].items()
-               if not art.exists(n, p["version"])]
-    print(f"{len(data['packages']) - len(missing)} present, {len(missing)} missing")
+    published = {n: p for n, p in data["packages"].items() if p.get("publish", True)}
+    missing = [(n, p) for n, p in published.items() if not art.exists(n, p["version"])]
+    print(f"{len(published) - len(missing)} present, {len(missing)} missing")
 
     if args.check_only:
         for name, pkg in missing:

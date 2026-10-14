@@ -14,7 +14,6 @@ WORKDIR /app
 ENV UV_COMPILE_BYTECODE=1 \
     UV_LINK_MODE=copy \
     UV_PYTHON_DOWNLOADS=never \
-    UV_NO_SOURCES=1 \
     UV_PROJECT_ENVIRONMENT=/opt/venv \
     PATH="/opt/venv/bin:$PATH"
 
@@ -26,7 +25,9 @@ RUN --mount=type=bind,from=pins,source=pyproject.toml,target=pyproject.toml \
     uv sync --frozen --no-dev --no-install-project
 
 # 2. The service itself, built from source. The patched pyproject.toml and
-#    uv.lock replace the ones in the build context.
+#    uv.lock replace the ones in the build context. No UV_NO_SOURCES: uv
+#    refuses it with --frozen; make_service_lock.py already removed the
+#    workspace sources of internal packages from the patched pyproject.toml.
 COPY . /app
 COPY --from=pins pyproject.toml uv.lock /app/
 RUN --mount=type=secret,id=uv_default_index,env=UV_DEFAULT_INDEX \

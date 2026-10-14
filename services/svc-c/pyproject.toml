@@ -17,3 +17,6 @@ dependencies = [
 root = "../.."                 # fallback for local builds
 tag_regex = "^v(?P<version>.+)$"
 fallback_version = "0.0.0"
+
+[tool.versioning]
+publish = false                # a service: versioned for its image, no wheel
