@@ -32,6 +32,7 @@ import argparse
 import json
 import os
 import shlex
+import shutil
 import subprocess
 import sys
 import tomllib
@@ -42,7 +43,7 @@ from packaging.version import InvalidVersion, Version
 TAG_PATTERN = "v*"
 HASH_LENGTH = 12
 TURBO_TASK = os.environ.get("VERSION_TURBO_TASK", "build")
-TURBO_BIN = shlex.split(os.environ.get("TURBO_BIN", "turbo"))
+TURBO_BIN = shlex.split(os.environ.get("TURBO_BIN", "")) or None  # default: see turbo_bin()
 
 
 def run(*cmd: str) -> str:
@@ -81,10 +82,22 @@ def last_release_version() -> str:
     return Version(normalize(tag.removeprefix("v"))).public
 
 
+def turbo_bin() -> list[str]:
+    """$TURBO_BIN, else turbo on PATH, else the repo's node_modules copy."""
+    if TURBO_BIN:
+        return TURBO_BIN
+    if shutil.which("turbo"):
+        return ["turbo"]
+    local = Path("node_modules/.bin/turbo")  # cwd is the repo root
+    if local.exists():
+        return [str(local.resolve())]
+    sys.exit("error: turbo not found; set TURBO_BIN or run npm install")
+
+
 def turbo_tasks() -> list[dict]:
     # Same VERSIONING_TAGS as turbo_build.sh, so the hashes match the build's.
     out = subprocess.run(
-        [*TURBO_BIN, "run", TURBO_TASK, "--dry=json"], check=True,
+        [*turbo_bin(), "run", TURBO_TASK, "--dry=json"], check=True,
         capture_output=True, text=True,
         env={**os.environ, "VERSIONING_TAGS": tag_state()},
     ).stdout
